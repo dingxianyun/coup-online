@@ -669,6 +669,9 @@ function noteGameChanges(g, prevGame) {
     const label = PHASE_LABELS[g.phase] || '对局更新';
     showPhaseBanner(g.phase === 'over' ? '对局结束' : label);
   }
+  if (g.lastReveal && prevGame && g.lastReveal.seq !== prevGame.lastReveal?.seq) {
+    showRevealCard(g.lastReveal);
+  }
   const attention = needsAttention(g);
   if (prevGame && attention && !S.ui.lastAttention) beep('turn');
   S.ui.lastAttention = attention;
@@ -684,6 +687,23 @@ function showPhaseBanner(text) {
     node.classList.add('is-out');
     setTimeout(() => node.remove(), 320);
   }, 1700);
+}
+
+function showRevealCard(reveal) {
+  if (!reveal || !reveal.role) return;
+  document.querySelector('.reveal-flash')?.remove();
+  const node = h('div', { class: 'reveal-flash', role: 'status', 'aria-live': 'polite' },
+    h('div', { class: 'reveal-flash-card' },
+      h('p', { class: 'reveal-flash-label', text: `${reveal.playerName || '有玩家'} 亮出` }),
+      buildRoleCard(reveal.role, { size: 'md', selected: true }),
+      h('p', { class: 'reveal-flash-note', text: '放回牌堆 · 补抽 1 张' })
+    )
+  );
+  document.body.append(node);
+  setTimeout(() => {
+    node.classList.add('is-out');
+    setTimeout(() => node.remove(), 300);
+  }, 2200);
 }
 
 /* ============================================================
@@ -1864,8 +1884,8 @@ function challengePanel(g, pending, mode) {
     panel.append(h('p', {
       class: 'fineprint',
       text: isBlockChallenge
-        ? '质疑失败：你失去 1 条命，阻止成立。质疑成功：阻止者失去 1 条命，原行动继续。'
-        : '质疑失败：你失去 1 条命，行动继续。质疑成功：冒充者失去 1 条命，本次行动取消。'
+        ? '质疑失败：你失去 1 条命；阻止者亮出角色牌、洗回牌堆补抽 1 张，阻止成立。质疑成功：阻止者失去 1 条命，原行动继续。'
+        : '质疑失败：你失去 1 条命；对方亮出角色牌、洗回牌堆补抽 1 张，行动继续。质疑成功：冒充者失去 1 条命，本次行动取消。'
     }));
   } else if ((isBlockChallenge ? pending.blockerId : pending.actorId) === me.id) {
     panel.append(waitingBox(isBlockChallenge

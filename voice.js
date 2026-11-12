@@ -203,8 +203,14 @@ export function createVoiceController({ getSession, toast, onChange }) {
     if (state.pcs.has(remoteId)) return state.pcs.get(remoteId);
     let pc;
     try {
-      // 不依赖公共 STUN；局域网/同一 NAT 下通常可用，公网复杂网络可能连不上。
-      pc = new RTCPeerConnection({ iceServers: [] });
+      // 公共 STUN 帮公网玩家打洞；没有 TURN，极严格 NAT 下仍可能连不上，但不影响游戏。
+      pc = new RTCPeerConnection({
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun.cloudflare.com:3478' }
+        ]
+      });
     } catch { return null; }
     state.pcs.set(remoteId, pc);
     state.pendingIce.set(remoteId, []);

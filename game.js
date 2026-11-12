@@ -104,6 +104,8 @@ export class Game {
     this.lifeLoss = null;
     this.deathLog = [];
     this.winnerId = null;
+    this.lastReveal = null;
+    this.revealSeq = 0;
     this.deck = [];
     this._start();
   }
@@ -453,6 +455,24 @@ export class Game {
     throw new GameError('未知响应');
   }
 
+  _revealAndReplace(player, role) {
+    const idx = player.hand.findIndex((c) => c.role === role);
+    if (idx < 0) return;
+    const [card] = player.hand.splice(idx, 1);
+    // 被质疑者亮出的牌回到牌堆，洗混后补抽一张；这不是失去生命。
+    this.deck.push(card);
+    shuffle(this.deck, this.rng);
+    if (this.deck.length) player.hand.push(this.deck.shift());
+    this.lastReveal = {
+      seq: ++this.revealSeq,
+      playerId: player.id,
+      playerName: player.name,
+      role,
+      ts: Date.now()
+    };
+    this._touch();
+  }
+
   _resolveActionChallenge(challengerId) {
     const p = this.pending;
     const actor = this._player(p.actorId);
@@ -460,11 +480,13 @@ export class Game {
     const claimed = p.claimedRole;
     const has = actor.hand.some((c) => c.role === claimed);
     if (has) {
+      this._revealAndReplace(actor, claimed);
       this._log(
-        `${challenger.name} 质疑 ${actor.name} 的「${roleName(claimed)}」失败，${challenger.name} 失去一条命。`,
+        `${challenger.name} 质疑 ${actor.name} 的「${roleName(claimed)}」失败。` +
+        `${actor.name} 当众亮出「${roleName(claimed)}」，将它放回牌堆并补抽 1 张；` +
+        `${challenger.name} 失去一条命。`,
         'danger'
       );
-      this._log(`你质疑失败：${actor.name} 确实持有「${roleName(claimed)}」。`, 'system', challengerId);
       this._queueLoss(challengerId, '质疑失败', 'challengeChallenger');
     } else {
       this._log(
@@ -532,11 +554,13 @@ export class Game {
     const challenger = this._player(challengerId);
     const has = blocker.hand.some((c) => c.role === p.blockRole);
     if (has) {
+      this._revealAndReplace(blocker, p.blockRole);
       this._log(
-        `${challenger.name} 质疑 ${blocker.name} 的「${roleName(p.blockRole)}」失败，${challenger.name} 失去一条命，阻止成立。`,
+        `${challenger.name} 质疑 ${blocker.name} 的「${roleName(p.blockRole)}」失败。` +
+        `${blocker.name} 当众亮出「${roleName(p.blockRole)}」，将它放回牌堆并补抽 1 张；` +
+        `${challenger.name} 失去一条命，阻止成立。`,
         'danger'
       );
-      this._log(`你质疑失败：${blocker.name} 确实持有「${roleName(p.blockRole)}」。`, 'system', challengerId);
       this._queueLoss(challengerId, '质疑失败', 'blockChallenger');
     } else {
       this._log(
@@ -1015,6 +1039,7 @@ export class Game {
       deckCount: this.deck.length,
       deathLog: this.deathLog.map((d) => ({ ...d })),
       lastDead,
+      lastReveal: this.lastReveal ? { ...this.lastReveal } : null,
       bishopCopyRole: this.getBishopCopyRole(),
       winnerId: this.winnerId,
       pending: this._pendingView(viewerId),

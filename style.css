@@ -2302,3 +2302,42 @@ a { color: var(--gold-hi); }
   .hand-head .meta { font-size: 0.64rem; }
   .hand-head .who { font-size: 0.9rem; }
 }
+
+/* 质疑失败：公开亮牌提示（不阻塞操作） */
+.reveal-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  background: radial-gradient(520px 360px at 50% 42%, rgba(6, 10, 17, 0.38), rgba(6, 10, 17, 0.78));
+  animation: revealFadeIn 0.18s ease both;
+}
+.reveal-flash.is-out { opacity: 0; transition: opacity 0.3s ease; }
+.reveal-flash-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 28px 18px;
+  border: 1px solid rgba(212, 175, 55, 0.62);
+  border-radius: 16px;
+  background: linear-gradient(160deg, rgba(25, 38, 63, 0.98), rgba(8, 13, 23, 0.99));
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.62), 0 0 34px rgba(212, 175, 55, 0.12);
+  animation: revealPop 0.32s cubic-bezier(0.2, 0.9, 0.25, 1.15) both;
+}
+.reveal-flash-card .role-card { --rw: 112px; border-color: var(--gold-hi); box-shadow: 0 0 24px rgba(212, 175, 55, 0.18); }
+.reveal-flash-label {
+  color: var(--gold-hi);
+  font-family: var(--serif);
+  font-size: 1.02rem;
+  letter-spacing: 0.1em;
+  text-align: center;
+}
+.reveal-flash-note { color: var(--muted); font-size: 0.76rem; letter-spacing: 0.04em; }
+@keyframes revealFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes revealPop {
+  from { transform: scale(0.88) translateY(8px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
