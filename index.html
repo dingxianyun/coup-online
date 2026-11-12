@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#070b12">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="政变：2–6 人在线身份伪装卡牌游戏。暗影宫廷，谎言之桌。">
+  <title>政变 · 暗影宫廷</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#view-root">跳到主内容</a>
+  <div class="bg-fx" aria-hidden="true"></div>
+
+  <div id="conn-banner" class="conn-banner" role="status" hidden>
+    <span class="conn-dot" aria-hidden="true"></span>
+    <span>连接断开，正在重连…</span>
+  </div>
+
+  <main id="view-root" class="view-root"></main>
+
+  <div id="drawer" class="drawer" aria-hidden="true">
+    <div class="drawer-backdrop" data-drawer-close></div>
+    <aside class="drawer-panel" role="dialog" aria-modal="true" aria-label="对局记录与聊天">
+      <header class="drawer-head">
+        <div class="tabs" role="tablist" aria-label="记录与聊天">
+          <button type="button" class="tab is-active" id="tab-log" role="tab" aria-selected="true" data-tab="log">
+            日志 <span class="badge" id="badge-log" hidden></span>
+          </button>
+          <button type="button" class="tab" id="tab-chat" role="tab" aria-selected="false" data-tab="chat">
+            聊天 <span class="badge" id="badge-chat" hidden></span>
+          </button>
+        </div>
+        <button type="button" class="icon-btn sound-toggle" id="drawer-sound" aria-label="开启音效"></button>
+        <button type="button" class="icon-btn drawer-close" id="drawer-close" aria-label="关闭记录面板"></button>
+      </header>
+      <div class="drawer-body" id="drawer-body" role="tabpanel" aria-live="polite"></div>
+      <form class="chat-form" id="chat-form" hidden>
+        <label class="sr-only" for="chat-input">发送聊天消息</label>
+        <input id="chat-input" maxlength="100" placeholder="说点什么…" autocomplete="off" enterkeyhint="send">
+        <button class="btn btn-gold btn-small" type="submit" id="chat-send">发送</button>
+      </form>
+    </aside>
+  </div>
+
+  <div id="toasts" class="toasts" role="status" aria-live="assertive"></div>
+  <div id="modal-root" class="modal-root" hidden></div>
+
+  <noscript>
+    <p class="noscript">需要启用 JavaScript 才能游玩「政变」。</p>
+  </noscript>
+
+  <template id="tpl-rules">
+    <div class="rules">
+      <p class="rules-lead">2–6 人的身份伪装卡牌游戏。每人有两条命，命就是角色牌。你可以宣称自己拥有任何角色——哪怕手里根本没有。其他人可以选择质疑。最后活着的人获胜。</p>
+
+      <h3>一、开局</h3>
+      <ul>
+        <li>2–6 人。每人 <strong>2 条命 = 2 张不同的角色牌</strong>，只有自己知道自己的牌。</li>
+        <li>6 个角色：公爵、队长、大使、刺客、领主、主教；<strong>每种 4 张，共 24 张</strong>。发牌后剩余的牌组成牌堆。</li>
+        <li>开局每人 <strong>2 金币</strong>；行动顺序的<strong>最后一位 3 金币</strong>。</li>
+        <li>金币上限 <strong>11</strong>。金币达到 11 时，轮到你时<strong>必须发动政变</strong>。</li>
+        <li>由房主指定首位行动玩家，之后按座位顺序轮流行动。</li>
+      </ul>
+
+      <h3>二、每回合行动</h3>
+      <div class="rules-table-wrap">
+        <table class="rules-table">
+          <thead><tr><th>行动</th><th>效果</th><th>花费</th><th>可被阻止</th></tr></thead>
+          <tbody>
+            <tr><td>收入</td><td>获得 1 金币，无风险</td><td>—</td><td>否</td></tr>
+            <tr><td>援助</td><td>获得 2 金币</td><td>—</td><td>公爵</td></tr>
+            <tr><td>征税</td><td>获得 3 金币（宣称公爵）</td><td>—</td><td>否</td></tr>
+            <tr><td>偷取</td><td>从一名玩家处偷 2 金币（宣称队长）</td><td>—</td><td>队长 / 大使</td></tr>
+            <tr><td>交换</td><td>抽 2 张牌，与手牌任意交换（宣称大使）</td><td>—</td><td>否</td></tr>
+            <tr><td>刺杀</td><td>目标失去 1 条命（宣称刺客）</td><td>3 金币</td><td>领主 / 主教（无人阵亡时）</td></tr>
+            <tr><td>主教复制</td><td>复制最后一名阵亡角色的主动技能（宣称主教）</td><td>复制刺杀需 3 金币</td><td>视复制的技能</td></tr>
+            <tr><td>政变</td><td>目标失去 1 条命</td><td>7 金币</td><td><strong>不可阻止</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ul>
+        <li><strong>偷取</strong>：目标金币不足 2 时偷走全部；你的金币已满时无法再获得。</li>
+        <li><strong>交换</strong>：从「原手牌 + 新抽的 2 张」中保留与手牌数量相同的牌，其余退回牌堆并重新洗混，所以别人的信息会重置。</li>
+        <li><strong>主教复制</strong>：复制最后阵亡角色的主动技能（征税 / 偷取 / 交换 / 刺杀）；若最后阵亡的是领主，则没有可复制的主动技能；若最后阵亡的是主教，会向前追溯一个非主教的阵亡角色。</li>
+        <li><strong>政变</strong>不可质疑、不可阻止，也不受任何角色被动影响。</li>
+      </ul>
+
+      <h3>三、伪装与质疑（核心）</h3>
+      <p>你可以假装自己拥有任何角色并发动该角色的技能，<strong>无论手牌里有没有</strong>。任何有资格的其他玩家都可以在你行动后选择质疑。</p>
+      <ul>
+        <li><strong>质疑成功</strong>（冒充者手里没有该角色）：冒充者失去 1 条命，<strong>本次行动取消</strong>。</li>
+        <li><strong>质疑失败</strong>（冒充者确实持有该角色）：质疑者失去 1 条命，<strong>行动继续进行</strong>。</li>
+        <li>质疑失败时<strong>不会展示对方其余手牌</strong>：质疑者会收到私密确认。但公开结果本身已经证明对方确实持有该角色，其他玩家也能推断出这一点——这是本作与标准 Coup 的差别（标准 Coup 会亮牌并补抽）。</li>
+        <li>质疑成功后，冒充者失去的那张角色牌会公开置入阵亡区。</li>
+        <li>一旦有人质疑，质疑阶段立即结束；没人质疑则倒计时结束后行动自动生效。</li>
+      </ul>
+
+      <h3>四、阻止与阻止质疑</h3>
+      <ul>
+        <li><strong>援助 +2</strong>：任意其他存活玩家可宣称公爵阻止。</li>
+        <li><strong>偷取</strong>：被偷的目标可宣称队长或大使阻止。</li>
+        <li><strong>刺杀</strong>：目标可宣称领主阻止；若场上<strong>还没有任何人阵亡</strong>，也可宣称主教阻止。一旦有人阵亡，主教的防刺杀被动作废。</li>
+        <li>阻止同样可以被质疑。质疑阻止的结果：
+          <ul>
+            <li>阻止者确实持有该角色 → 质疑者失去 1 条命，<strong>阻止成立</strong>，原行动取消。</li>
+            <li>阻止者没有该角色 → 阻止者失去 1 条命，<strong>阻止失败</strong>，原行动继续。</li>
+          </ul>
+        </li>
+        <li>阻止成立时原行动完全取消；刺杀（含主教复制刺杀）被质疑成功或阻止成立时，已支付的 3 金币都不退还（政变本身无法被阻止）。</li>
+        <li><strong>谎称防刺的风险</strong>：被刺杀时，若你谎称「领主」或「主教」阻止并被质疑成功，你会<strong>先因质疑失败失去 1 条命</strong>；随后<strong>刺杀仍然命中</strong>，你还要再失去 1 条命。所以只有 2 条命时会<strong>连续失去全部生命、当场出局</strong>。</li>
+      </ul>
+
+      <h3>五、失去生命与出局</h3>
+      <ul>
+        <li>失去 1 条命 = 从自己的手牌中<strong>永久失去 1 张角色牌</strong>，由当事人自己选择；<strong>不补抽新牌</strong>。</li>
+        <li>失去的牌公开置入阵亡区，并成为主教可复制的「最后阵亡角色」。</li>
+        <li>2 张牌都失去即出局，金币清零，不再参与回合，但仍然可以看到对局。</li>
+        <li>被刺杀或政变指定时，只有质疑与阻止都结束后才真正结算失去生命。</li>
+        <li>因此，被刺杀时谎称防刺角色且被质疑成功，会<strong>连续失去两条命</strong>（质疑罚 1 命 + 刺杀命中 1 命），2 条命直接出局。</li>
+      </ul>
+
+      <h3>六、主教补充规则</h3>
+      <ul>
+        <li>主教主动复制时，从阵亡记录的最后往前找；<strong>最后阵亡的是领主</strong> → 没有主动技能；<strong>最后阵亡的是主教</strong> → 跳过主教，向前追溯一个非主教阵亡角色。</li>
+        <li>复制刺杀<strong>仍需支付 3 金币</strong>；复制的偷取、刺杀仍可被队长 / 大使 / 领主等对应角色阻止。</li>
+        <li>主教的「防刺杀」被动只在场上<strong>无人阵亡</strong>时有效，且只能在你被刺杀时使用；它也可以被质疑。</li>
+      </ul>
+
+      <h3>七、公开信息与私密信息</h3>
+      <ul>
+        <li><strong>公开</strong>：金币数、手牌数量、阵亡角色、每次宣称的行动与角色、质疑与阻止的公开结果、行动顺序。</li>
+        <li><strong>私密</strong>：自己的手牌；质疑失败时质疑者会收到「对方确实持有该角色」的私密确认，其他人只看到公开结果。</li>
+        <li>因此，质疑失败者可能掌握关键信息，也可能在虚张声势——请自行判断。</li>
+      </ul>
+
+      <h3>八、获胜</h3>
+      <p>最后存活的玩家获胜。若所有人同时出局，则本局无人获胜。</p>
+
+      <h3>九、与本作和标准 Coup 的差异</h3>
+      <ul>
+        <li>每人 2 条命，失去生命<strong>不补抽</strong>；6 个角色每种 4 张。</li>
+        <li>质疑失败<strong>不展示对方其余手牌</strong>，但公开结果已证明该角色确实在对方手上；质疑者还会收到私密确认。</li>
+        <li><strong>政变不可阻止</strong>、不可质疑。</li>
+        <li>金币上限 11，达到 11 必须政变。</li>
+        <li>新增<strong>领主</strong>（无主动、可挡刺杀）与<strong>主教</strong>（复制阵亡者主动、无人阵亡时可挡刺杀）。</li>
+      </ul>
+
+      <h3>十、计时</h3>
+      <p>质疑、阻止、交换角色牌、选择失去生命都有倒计时，由服务器统一计时。超时会自动判定：视为不质疑 / 不阻止 / 保留原手牌 / 随机失去一张牌，不会卡住对局。</p>
+
+      <h3>角色一览</h3>
+      <div class="rules-roles" id="rules-roles"></div>
+    </div>
+  </template>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

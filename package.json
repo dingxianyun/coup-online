@@ -1,0 +1,13 @@
+{
+  "name": "coup-online-flat",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "政变 — 在线多人卡牌游戏（单层部署版）",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
