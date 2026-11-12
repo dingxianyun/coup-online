@@ -1,3 +1,7 @@
+# 政变 · 部署版
+
+线上固定地址：https://coup-online-production-c023c1dc.up.railway.app
+
 # 政变 · 单层部署版
 
 上传到 GitHub 根目录后，Render 直接部署即可。
